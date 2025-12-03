@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dino Oyunu - Mobile v1.2</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #333;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            touch-action: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #game-wrapper {
+            position: relative;
+            width: 900px;
+            height: 500px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        #game-container {
+            width: 900px;
+            height: 500px; 
+            border-bottom: 4px solid #535353;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background-image: url('background.png');
+            background-size: cover; 
+            background-position: center; 
+            background-repeat: no-repeat; 
+            overflow: hidden;
+        }
+
+        #dino {
+            width: 184px;
+            height: 253px;
+            position: absolute;
+            bottom: 0;
+            left: 50px;
+            background-image: url('IMG_2840-removebg-preview.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center bottom;
+            z-index: 2;
+            transform-origin: center center;
+        }
+
+        #dino.jumping {
+            background-image: url('unnamed-removebg-preview.png');
+            background-position: center center; 
+        }
+
+        #dino.crouching {
+            transform: rotate(-90deg); 
+            bottom: -90px; 
+            left: 10px; 
+            height: 253px; 
+            width: 184px;
+        }
+
+        .obstacle {
+            position: absolute;
+            bottom: 0;
+            left: 900px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            z-index: 1;
+        }
+
+        .cactus {
+            width: 52px;
+            height: 78px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23FF0000'%3E%3Cpath d='M12,2C10.34,2 9,3.34 9,5V14H7V11C7,10.45 6.55,10 6,10V10C5.45,10 5,10.45 5,11V16C5,17.1 5.9,18 7,18H9V22H15V18H17C18.1,18 19,17.1 19,16V13C19,12.45 18.55,12 18,12V12C17.45,12 17,12.45 17,13V16H15V5C15,3.34 13.66,2 12,2M12,4C12.55,4 13,4.45 13,5V14H11V5C11,4.45 11.45,4 12,4Z' /%3E%3C/svg%3E");
+            background-position: bottom center;
+        }
+
+        .flying-dino {
+            width: 100px; 
+            height: 60px; 
+            background-image: url('erdem.png'); 
+            background-position: center;
+            transform: rotate(-45deg); 
+            filter: drop-shadow(0px 0px 5px #FF0000);
+        }
+        
+        #score {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 30px;
+            color: #3b003b; 
+            font-weight: bold;
+            text-shadow: 1px 1px 2px #ffffff; 
+            pointer-events: none;
+        }
+
+        #game-over {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 20;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #535353;
+        }
+
+        #game-over p {
+            font-size: 40px;
+            color: #535353;
+            margin: 0 0 20px 0;
+            font-weight: bold;
+        }
+
+        #restart-button {
+            padding: 15px 30px;
+            font-size: 24px;
+            font-family: inherit;
+            cursor: pointer;
+            background-color: #535353;
+            color: white;
+            border: none;
+            border-radius: 8px;
+        }
+        
+        .touch-zone {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            width: 50%;
+            z-index: 10;
+        }
+        #left-zone { left: 0; }
+        #right-zone { right: 0; }
+        
+        @media screen and (orientation: portrait) {
+            #portrait-warning {
+                display: flex;
+                position: fixed;
+                top: 0; left: 0; width: 100%; height: 100%;
+                background: #000;
+                color: white;
+                z-index: 999;
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+                font-size: 24px;
+                padding: 20px;
+            }
+        }
+        @media screen and (orientation: landscape) {
+            #portrait-warning { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div id="portrait-warning">Lütfen Telefonu Yan Çevirin ↻</div>
+
+    <div id="game-wrapper">
+        <div id="game-container">
+            <div id="score">Skor: 0</div>
+            <div id="dino"></div>
+            
+            <div id="left-zone" class="touch-zone"></div>
+            <div id="right-zone" class="touch-zone"></div>
+
+            <div id="game-over">
+                <p>YANDIN!</p>
+                <button id="restart-button">Tekrar Dene</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const dino = document.getElementById("dino");
+        const gameContainer = document.getElementById("game-container");
+        const gameWrapper = document.getElementById("game-wrapper");
+        const scoreElement = document.getElementById("score");
+        const gameOverElement = document.getElementById("game-over");
+        const restartButton = document.getElementById("restart-button");
+        const leftZone = document.getElementById("left-zone");
+        const rightZone = document.getElementById("right-zone");
+        const jumpSound = new Audio('poyraz.mp3'); 
+
+        let isJumping = false;
+        let isCrouching = false; 
+        let dinoPosition = 0; 
+        
+        let jumpVelocity = 15; 
+        let gravity = 0.8; 
+        
+        let isGameOver = false;
+        let score = 0;
+        let gameSpeed = 6; 
+        let obstacles = [];
+        let gameInterval;
+        let obstacleTimeout;
+
+        function resizeGame() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            const baseWidth = 900;
+            const baseHeight = 500;
+            const scale = Math.min(width / baseWidth, height / baseHeight);
+            
+            gameWrapper.style.transform = `scale(${scale})`;
+            gameWrapper.style.width = `${baseWidth}px`;
+            gameWrapper.style.height = `${baseHeight}px`;
+        }
+        
+        window.addEventListener('resize', resizeGame);
+        resizeGame(); 
+
+        function jump(e) {
+            if (isJumping || isCrouching || isGameOver) return; 
+
+            if ((e && e.type === 'touchstart') || (e && e.code === 'Space') || (e && e.code === 'ArrowUp') || (e && e.forceJump)) {
+                isJumping = true;
+                dino.classList.add("jumping");
+                
+                jumpSound.currentTime = 0;
+                jumpSound.play().catch(error => console.log(error));
+
+                let jumpCount = 0;
+                let jumpUpInterval = setInterval(() => {
+                    if (jumpCount < 15) { 
+                        dinoPosition += jumpVelocity;
+                        dino.style.bottom = dinoPosition + 'px';
+                        jumpCount++;
+                    } 
+                    else {
+                        clearInterval(jumpUpInterval);
+                        let fallInterval = setInterval(() => {
+                            if (dinoPosition > 0) {
+                                dinoPosition -= jumpVelocity * gravity;
+                                if(dinoPosition < 0) dinoPosition = 0;
+                                dino.style.bottom = dinoPosition + 'px';
+                            } else {
+                                clearInterval(fallInterval);
+                                isJumping = false;
+                                dino.classList.remove("jumping");
+                                dinoPosition = 0;
+                                dino.style.bottom = '0px';
+                            }
+                        }, 20);
+                    }
+                }, 20);
+            }
+        }
+
+        function crouch(e) {
+            if (isJumping || isGameOver || isCrouching) return; 
+
+            if ((e && e.code === 'ArrowDown') || (e && e.forceCrouch)) {
+                isCrouching = true;
+                dino.classList.add("crouching");
+            }
+        }
+
+        function standUp(e) {
+            if (isGameOver || !isCrouching) return;
+
+            if ((e && e.code === 'ArrowDown') || (e && e.forceStand)) {
+                isCrouching = false;
+                dino.classList.remove("crouching");
+            }
+        }
+
+        rightZone.addEventListener('touchstart', function(e) { e.preventDefault(); jump({ forceJump: true }); });
+        leftZone.addEventListener('touchstart', function(e) { e.preventDefault(); crouch({ forceCrouch: true }); });
+        leftZone.addEventListener('touchend', function(e) { e.preventDefault(); standUp({ forceStand: true }); });
+
+        function createObstacle() {
+            if (isGameOver) return;
+            
+            clearTimeout(obstacleTimeout);
+
+            let obstacle = document.createElement("div");
+            obstacle.classList.add("obstacle");
+
+            if (Math.random() < 0.35) {
+                obstacle.classList.add("flying-dino");
+                const heights = [121]; 
+                obstacle.style.bottom = heights[Math.floor(Math.random() * heights.length)] + 'px';
+            } else {
+                obstacle.classList.add("cactus");
+            }
+
+            gameContainer.appendChild(obstacle);
+            
+            let randomTime = Math.random() * 1000 + 1500; 
+            obstacleTimeout = setTimeout(createObstacle, randomTime);
+
+            obstacles.push(obstacle);
+        }
+
+        function gameLoop() {
+            if (isGameOver) return;
+
+            score++;
+            scoreElement.innerHTML = 'Skor: ' + Math.floor(score / 10);
+
+            if (score > 0 && score % 300 === 0) { 
+                gameSpeed += 1;
+            }
+
+            obstacles.forEach((obstacle, index) => {
+                let obstaclePosition = parseInt(window.getComputedStyle(obstacle).getPropertyValue("left"));
+                
+                obstacle.style.left = (obstaclePosition - gameSpeed) + 'px';
+
+                if (obstaclePosition < -100) {
+                    obstacle.remove();
+                    obstacles.splice(index, 1);
+                }
+
+                // KOORDİNAT HESAPLAMALARI
+                const dX = dino.offsetLeft;
+                const dY = dino.offsetTop;
+                const dW = dino.offsetWidth;
+                const dH = dino.offsetHeight;
+
+                let dLeft = dX;
+                let dRight = dX + dW;
+                let dTop = dY;
+                let dBottom = dY + dH;
+
+                const oX = obstacle.offsetLeft;
+                const oY = obstacle.offsetTop;
+                const oW = obstacle.offsetWidth;
+                const oH = obstacle.offsetHeight;
+
+                let oLeft = oX;
+                let oRight = oX + oW;
+                let oTop = oY;
+                let oBottom = oY + oH;
+                
+                let hitboxPaddingX = 10; 
+                let hitboxPaddingY = 15; 
+                let dinoSideBuffer = 60; 
+
+                // HITBOX AYARLARI
+                if (obstacle.classList.contains('flying-dino')) {
+                    // Erdem için toleransı azalttık (padding az = hitbox büyük)
+                    hitboxPaddingX = 25;  // Yatayda daha az boşluk
+                    hitboxPaddingY = 5;   // Dikeyde Neredeyse TAM hitbox (Çok tehlikeli)
+                    dinoSideBuffer = 60; 
+                    
+                    oTop -= 115;
+                    oBottom -= 115;
+                }
+
+                if (isCrouching) {
+                    let crouchToleranceTop = 30; 
+                    let crouchToleranceBottom = 0; 
+                    
+                    // Eğilince kafa hitbox'ını çok daha aşağı çekiyoruz
+                    // Çünkü Erdem'in hitbox'ını büyüttük, kurtarmak için daha çok eğilmek lazım
+                    dTop += 110; 
+
+                    if (
+                        dRight - 20 > oLeft + hitboxPaddingX && 
+                        dLeft + 20 < oRight - hitboxPaddingX &&
+                        dTop + crouchToleranceTop < oBottom - hitboxPaddingY && 
+                        dBottom - crouchToleranceBottom > oTop + hitboxPaddingY    
+                    ) {
+                        gameOver();
+                    }
+                } else {
+                    if (
+                        dRight - dinoSideBuffer > oLeft + hitboxPaddingX && 
+                        dLeft + 60 < oRight - hitboxPaddingX &&
+                        dBottom > oTop + hitboxPaddingY &&
+                        dTop < oBottom - hitboxPaddingY
+                    ) {
+                         gameOver();
+                    }
+                }
+            });
+        }
+
+        function gameOver() {
+            isGameOver = true;
+            clearInterval(gameInterval);
+            clearTimeout(obstacleTimeout);
+            gameOverElement.style.display = 'block';
+            dino.classList.remove("jumping");
+            dino.classList.remove("crouching");
+        }
+
+        function restartGame(e) {
+            if(e) e.stopPropagation(); 
+
+            isGameOver = false;
+            score = 0;
+            gameSpeed = 6;
+            scoreElement.innerHTML = 'Skor: 0';
+            gameOverElement.style.display = 'none';
+            dinoPosition = 0;
+            dino.style.bottom = '0px';
+            dino.style.left = '50px';
+            isCrouching = false;
+            dino.classList.remove("crouching");
+            
+            clearTimeout(obstacleTimeout);
+            obstacles.forEach(obs => obs.remove());
+            obstacles = [];
+
+            startGame();
+        }
+
+        function startGame() {
+            createObstacle();
+            gameInterval = setInterval(gameLoop, 20);
+        }
+
+        document.addEventListener('keydown', jump); 
+        document.addEventListener('keydown', crouch); 
+        document.addEventListener('keyup', standUp); 
+        
+        restartButton.addEventListener('click', restartGame);
+        restartButton.addEventListener('touchstart', restartGame);
+
+        startGame();
+
+    </script>
+</body>
+</html>
