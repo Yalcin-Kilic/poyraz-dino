@@ -2,15 +2,17 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dino Oyunu - Mobile v1.2</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Dino Oyunu - Mobile Final Fix</title>
     <style>
         body {
             margin: 0;
             padding: 0;
             width: 100vw;
-            height: 100vh;
-            background-color: #333;
+            /* YENİ: dvh kullanımı (Tarayıcı çubuklarını hesaba katar) */
+            height: 100vh; 
+            height: 100dvh; 
+            background-color: #222; /* Arka plan daha koyu, oyun öne çıksın */
             font-family: 'Courier New', Courier, monospace;
             overflow: hidden;
             touch-action: none;
@@ -24,7 +26,8 @@
             width: 900px;
             height: 500px;
             overflow: hidden;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            /* Hafif gölge ekleyerek sınırları belli edelim */
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
         }
 
         #game-container {
@@ -96,7 +99,8 @@
         #score {
             position: absolute;
             top: 20px;
-            right: 30px;
+            /* DÜZELTME: Skoru biraz daha içeri aldık (Çentik/Yuvarlak köşe sorunu için) */
+            right: 50px; 
             font-size: 30px;
             color: #3b003b; 
             font-weight: bold;
@@ -209,12 +213,19 @@
         let gameInterval;
         let obstacleTimeout;
 
+        // --- GÜVENLİ ÖLÇEKLENDİRME (SAFE SCALE) ---
         function resizeGame() {
             const width = window.innerWidth;
             const height = window.innerHeight;
             const baseWidth = 900;
             const baseHeight = 500;
-            const scale = Math.min(width / baseWidth, height / baseHeight);
+            
+            // Ekranın %95'ini kullanacak şekilde hesapla (Güvenlik Payı)
+            // Bu, kaktüslerin adres çubuğu altında kalmasını engeller.
+            const safeWidth = width * 0.95;
+            const safeHeight = height * 0.95;
+
+            const scale = Math.min(safeWidth / baseWidth, safeHeight / baseHeight);
             
             gameWrapper.style.transform = `scale(${scale})`;
             gameWrapper.style.width = `${baseWidth}px`;
@@ -223,6 +234,8 @@
         
         window.addEventListener('resize', resizeGame);
         resizeGame(); 
+
+        // --- OYUN FONKSİYONLARI (MEKANİKLER DEĞİŞMEDİ) ---
 
         function jump(e) {
             if (isJumping || isCrouching || isGameOver) return; 
@@ -327,7 +340,7 @@
                     obstacles.splice(index, 1);
                 }
 
-                // KOORDİNAT HESAPLAMALARI
+                // KOORDİNAT HESAPLAMALARI (Screen Space yerine Local Space)
                 const dX = dino.offsetLeft;
                 const dY = dino.offsetTop;
                 const dW = dino.offsetWidth;
@@ -348,15 +361,14 @@
                 let oTop = oY;
                 let oBottom = oY + oH;
                 
+                // HITBOX AYARLARI (V1.2 ile Birebir Aynı)
                 let hitboxPaddingX = 10; 
                 let hitboxPaddingY = 15; 
                 let dinoSideBuffer = 60; 
 
-                // HITBOX AYARLARI
                 if (obstacle.classList.contains('flying-dino')) {
-                    // Erdem için toleransı azalttık (padding az = hitbox büyük)
-                    hitboxPaddingX = 25;  // Yatayda daha az boşluk
-                    hitboxPaddingY = 5;   // Dikeyde Neredeyse TAM hitbox (Çok tehlikeli)
+                    hitboxPaddingX = 25;  
+                    hitboxPaddingY = 5;   
                     dinoSideBuffer = 60; 
                     
                     oTop -= 115;
@@ -367,8 +379,6 @@
                     let crouchToleranceTop = 30; 
                     let crouchToleranceBottom = 0; 
                     
-                    // Eğilince kafa hitbox'ını çok daha aşağı çekiyoruz
-                    // Çünkü Erdem'in hitbox'ını büyüttük, kurtarmak için daha çok eğilmek lazım
                     dTop += 110; 
 
                     if (
@@ -402,7 +412,7 @@
         }
 
         function restartGame(e) {
-            if(e) e.stopPropagation(); 
+            if(e) e.stopPropagation();
 
             isGameOver = false;
             score = 0;
